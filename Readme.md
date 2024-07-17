@@ -1,4 +1,4 @@
-#Win ranges generator (PHP/C++) versions.
+# Win ranges generator (PHP/C++) versions.
 Can be used for RtpCalculator
 
 |  Value |  Description | Variable name |
