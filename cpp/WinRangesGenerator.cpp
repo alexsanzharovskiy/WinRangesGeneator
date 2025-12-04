@@ -16,11 +16,11 @@ public:
     static const std::string JSON_FILE_NAME;
 
 private:
-    float start;
-    float end;
-    std::map<int, float> rangeSteps;
+    double start;
+    double end;
+    std::map<int, double> rangeSteps;
     int exactStepLimitValue;
-    float minStep;
+    double minStep;
     int maxWin;
 
     std::string savePath;
@@ -28,7 +28,7 @@ private:
     std::vector<std::string> generatedRanges;
 
 public:
-    WinRangesGenerator(int maxWin, float minStep, int exactStepLimitValue, const std::map<int, float>& rangeSteps, const std::string& exePath)
+    WinRangesGenerator(int maxWin, double minStep, int exactStepLimitValue, const std::map<int, double>& rangeSteps, const std::string& exePath)
         : start(0.00), end(0.00), maxWin(maxWin), minStep(minStep), exactStepLimitValue(exactStepLimitValue), rangeSteps(rangeSteps) {
             savePath = exePath + "/storage/" + JSON_FILE_NAME;
             createStorageDirectory(exePath + "/storage");
@@ -76,21 +76,23 @@ private:
         int currentStepIndex = 0;
         while (end < maxWin) {
             if (end < exactStepLimitValue) {
-                start += minStep;
-                end += minStep;
+                start = round2(start + minStep);
+                end = round2(end + minStep);
             } else {
                 if (currentStepIndex < keys.size() - 1 && end >= keys[currentStepIndex + 1]) {
                     currentStepIndex++;
                 }
-                start = end;
-                end += rangeSteps[keys[currentStepIndex]];
+                start = round2(end);
+                end = round2(end + rangeSteps[keys[currentStepIndex]]);
             }
 
             std::ostringstream rangeStream;
             rangeStream << std::fixed << std::setprecision(2);
+            double payoutVal = (start < exactStepLimitValue) ? start : start + (end - start) / 2.0;
+            payoutVal = round2(payoutVal);
             std::string startStr = formatFloat(start);
             std::string endStr = formatFloat(end);
-            std::string payoutStr = formatFloat(start < exactStepLimitValue ? start : start + (end - start) / 2);
+            std::string payoutStr = formatFloat(payoutVal);
             rangeStream << "{\"payout\":" << payoutStr
                         << ",\"ranges\":[" << startStr << "," << endStr << "]}";
             generatedRanges.push_back(rangeStream.str());
@@ -103,9 +105,13 @@ private:
         generatedRanges.push_back(finalRangeStream.str());
     }
 
-    std::string formatFloat(float value) {
-        if (value == static_cast<int>(value)) {
-            return std::to_string(static_cast<int>(value));
+    static double round2(double v) {
+        return std::round(v * 100.0) / 100.0;
+    }
+
+    std::string formatFloat(double value) {
+        if (std::fabs(value - std::round(value)) < 1e-9) {
+            return std::to_string(static_cast<int>(std::round(value)));
         } else {
             std::ostringstream out;
             out << std::fixed << std::setprecision(2) << value;
@@ -136,7 +142,7 @@ int main(int argc, char* argv[]) {
     float minStep = std::stof(argv[2]);
     int exactStepLimitValue = std::stoi(argv[3]);
 
-    std::map<int, float> rangeSteps;
+    std::map<int, double> rangeSteps;
     std::string stepsStr = argv[4];
     std::istringstream stepsStream(stepsStr);
     std::string step;
@@ -145,7 +151,7 @@ int main(int argc, char* argv[]) {
         std::string keyStr, valueStr;
         if (std::getline(stepStream, keyStr, ':') && std::getline(stepStream, valueStr, ':')) {
             int key = std::stoi(keyStr);
-            float value = std::stof(valueStr);
+            double value = std::stod(valueStr);
             rangeSteps[key] = value;
         }
     }
