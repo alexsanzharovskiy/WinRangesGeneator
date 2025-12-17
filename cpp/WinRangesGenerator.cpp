@@ -13,7 +13,7 @@ class WinRangesGenerator {
 public:
     static const std::string PAYOUT;
     static const std::string RANGES;
-    static const std::string JSON_FILE_NAME;
+    static const std::string DEFAULT_JSON_FILE_NAME;
 
 private:
     double start;
@@ -28,9 +28,15 @@ private:
     std::vector<std::string> generatedRanges;
 
 public:
-    WinRangesGenerator(int maxWin, double minStep, int exactStepLimitValue, const std::map<int, double>& rangeSteps, const std::string& exePath)
+    WinRangesGenerator(int maxWin,
+                       double minStep,
+                       int exactStepLimitValue,
+                       const std::map<int, double>& rangeSteps,
+                       const std::string& exePath,
+                       const std::string& fileName)
         : start(0.00), end(0.00), maxWin(maxWin), minStep(minStep), exactStepLimitValue(exactStepLimitValue), rangeSteps(rangeSteps) {
-            savePath = exePath + "/storage/" + JSON_FILE_NAME;
+            std::string outName = fileName.empty() ? DEFAULT_JSON_FILE_NAME : fileName;
+            savePath = exePath + "/storage/" + outName;
             createStorageDirectory(exePath + "/storage");
         }
 
@@ -74,21 +80,19 @@ private:
         }
 
         int currentStepIndex = 0;
+        // Стартуем сразу с exactStepLimitValue, без мелкого шага 0.1
+        start = end = std::max(0, exactStepLimitValue);
+
         while (end < maxWin) {
-            if (end < exactStepLimitValue) {
-                start = round2(start + minStep);
-                end = round2(end + minStep);
-            } else {
-                if (currentStepIndex < keys.size() - 1 && end >= keys[currentStepIndex + 1]) {
-                    currentStepIndex++;
-                }
-                start = round2(end);
-                end = round2(end + rangeSteps[keys[currentStepIndex]]);
+            if (currentStepIndex < static_cast<int>(keys.size()) - 1 && end >= keys[currentStepIndex + 1]) {
+                currentStepIndex++;
             }
+            start = round2(end);
+            end = round2(end + rangeSteps[keys[currentStepIndex]]);
 
             std::ostringstream rangeStream;
             rangeStream << std::fixed << std::setprecision(2);
-            double payoutVal = (start < exactStepLimitValue) ? start : start + (end - start) / 2.0;
+            double payoutVal = start + (end - start) / 2.0;
             payoutVal = round2(payoutVal);
             std::string startStr = formatFloat(start);
             std::string endStr = formatFloat(end);
@@ -126,11 +130,11 @@ private:
 
 const std::string WinRangesGenerator::PAYOUT = "payout";
 const std::string WinRangesGenerator::RANGES = "ranges";
-const std::string WinRangesGenerator::JSON_FILE_NAME = "win_ranges.json";
+const std::string WinRangesGenerator::DEFAULT_JSON_FILE_NAME = "win_ranges_base.json";
 
 int main(int argc, char* argv[]) {
     if (argc < 5) {
-        std::cerr << "Usage: " << argv[0] << " maxWin minStep exactStepLimitValue rangeSteps..." << std::endl;
+        std::cerr << "Usage: " << argv[0] << " maxWin minStep exactStepLimitValue rangeSteps [output_file]" << std::endl;
         return 1;
     }
 
@@ -156,7 +160,9 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    WinRangesGenerator generator(maxWin, minStep, exactStepLimitValue, rangeSteps, exePath);
+    std::string outFile = (argc >= 6) ? argv[5] : "";
+
+    WinRangesGenerator generator(maxWin, minStep, exactStepLimitValue, rangeSteps, exePath, outFile);
 
     if (generator.generateJsonFile()) {
         std::cout << "JSON file successfully created: " << generator.getSavePath() << std::endl;

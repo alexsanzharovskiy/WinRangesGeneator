@@ -1,53 +1,40 @@
-# Win ranges generator (PHP/C++) versions.
-Can be used for RtpCalculator
+# WinRangesGenerator
+Генератор таблиц win ranges (C++/PHP). Используется для MathEngine/Simulator.
 
-|  Value |  Description | Variable name |
+## Параметры
+
+| Позиция | Значение | Описание |
 |---|---|---|
-|  5000 |  Max winning multiplier| $maxWin |
-|  0.25 |  Minimum winning (minimal step of increasing ranges)| $minStep |
-|  10 | Maximum multiplier for exact start:end in ranges  | $maxMultiplier|
-|  10:5;2000:10;1000:20 | Next step is to provider multiplier ranges for generator. In format: {fromMultiplier1}:{increase1};{fromMultiplier2}:{increase2}..., Example:10:5;200:10;1000:20  | $ranges | 
+| 1 | `maxWin` | Максимальный множитель |
+| 2 | `minStep` | Минимальный шаг выплат (стартовая граница) |
+| 3 | `maxMultiplier` | Порог, до которого диапазоны точные (start:end) |
+| 4 | `ranges` | Правила роста шага: `{from}:{inc};...` (пример: `10:5;2000:10;1000:20`) |
+| 5 | `output_file` | (опционально) имя файла, по умолчанию `win_ranges_base.json` |
 
---------
-## C++ Usage 
+## C++ usage
 
-1) How to compile file:
-   1) ``g++ -std=c++11 -o WinRangesGenerator WinRangesGenerator.cpp ``
-
-
-2) How to run Command:
-``./WinRangesGenerator 5000 0.25 10 '10:5;2000:10;1000:20'``
-
-------------
-
-##PHP Usage
-```php
-<?php
- $service = new WinRangesGenerator(
-    $maxWin,
-    $minStep,
-    $maxMultiplier,
-    $ranges
-);
-
-$service->generateJsonFile();
-
+Сборка:
+```bash
+g++ -std=c++11 -o WinRangesGenerator WinRangesGenerator.cpp
 ```
--------------
 
-As result of command execution
+Запуск:
+```bash
+./WinRangesGenerator 5000 0.25 10 '10:5;2000:10;1000:20' win_ranges_base.json
+```
 
+## PHP usage
+```php
+$service = new WinRangesGenerator($maxWin, $minStep, $maxMultiplier, $ranges);
+$service->generateJsonFile();
+```
+
+## Формат результата
+JSON-массив вида:
 ```json
-[
-    {"payout":0,"ranges":[0,0]},
-    {"payout":0.25,"ranges":[0.25,0.25]},
-    {"payout":0.50,"ranges":[0.50,0.50],
-    ...
-    {"payout":10,"ranges":[10,10]},
-    {"payout":12.50,"ranges":[10,15]},
-    {"payout":17.50,"ranges":[15,20]},
-    ...
-    {"payout":4997.50,"ranges":[4995,5000]},
-    {"payout":5000,"ranges":[5000,5000]}
-]
-
+{
+  "payout": 12.5,
+  "ranges": [10, 15]
+}
+```
+Первый диапазон начинается строго с `minStep`, далее шаги увеличиваются по правилам `ranges`.
